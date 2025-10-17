@@ -148,6 +148,9 @@ class DashboardViewModel: ObservableObject {
         
         // Mark dates with expenses for calendar
         markDatesWithExpenses(from: expenses)
+        
+        // Update widget data
+        updateWidgetData()
     }
     
     // MARK: - Category Breakdown
