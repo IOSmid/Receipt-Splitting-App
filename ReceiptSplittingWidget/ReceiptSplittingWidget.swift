@@ -2,30 +2,15 @@ import WidgetKit
 import SwiftUI
 import Charts
 
-// MARK: - Widget Entry
-struct WidgetEntry: TimelineEntry {
-    let date: Date
-    let totalSpending: Double
-    let budgetAmount: Double
-    let spendingProgress: Double
-    let totalOwed: Double
-    let pendingRequestsCount: Int
-    let recentExpenses: [ExpenseSummary]
-    let categoryBreakdown: [CategoryData]
-    let timeframe: String
-}
-
-// MARK: - Expense Summary
-struct ExpenseSummary: Identifiable {
-    let id: UUID
+// MARK: - CategoryBreakdownData (與 App 端一致)
+struct CategoryBreakdownData: Codable {
     let name: String
     let amount: Double
-    let date: Date
-    let category: String
-    let categoryIcon: String
+    let colorHex: String
+    let percentage: Double
 }
 
-// MARK: - Category Data
+// MARK: - Widget 顯示用的資料型別
 struct CategoryData: Identifiable {
     let id = UUID()
     let name: String
@@ -34,52 +19,60 @@ struct CategoryData: Identifiable {
     let percentage: Double
 }
 
-// MARK: - Widget Provider
+// MARK: - Widget Entry
+struct WidgetEntry: TimelineEntry {
+    let date: Date
+    let categoryBreakdown: [CategoryData]
+}
+
+// MARK: - Provider
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> WidgetEntry {
-        WidgetEntry(
-            date: Date(),
-            totalSpending: 1234.56,
-            budgetAmount: 2000.0,
-            spendingProgress: 0.62,
-            totalOwed: 456.78,
-            pendingRequestsCount: 3,
-            recentExpenses: [
-                ExpenseSummary(id: UUID(), name: "Grocery Store", amount: 89.45, date: Date(), category: "Groceries", categoryIcon: "cart"),
-                ExpenseSummary(id: UUID(), name: "Restaurant", amount: 45.20, date: Date(), category: "Dining", categoryIcon: "fork.knife"),
-                ExpenseSummary(id: UUID(), name: "Gas Station", amount: 55.00, date: Date(), category: "Transportation", categoryIcon: "car")
-            ],
-            categoryBreakdown: [
-                CategoryData(name: "Groceries", amount: 450.0, color: .green, percentage: 36.5),
-                CategoryData(name: "Dining", amount: 380.0, color: .orange, percentage: 30.8),
-                CategoryData(name: "Transportation", amount: 250.0, color: .blue, percentage: 20.2)
-            ],
-            timeframe: "This Week"
-        )
+        WidgetEntry(date: Date(), categoryBreakdown: sampleCategories)
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (WidgetEntry) -> ()) {
-        completion(placeholder(in: context))
+    func getSnapshot(in context: Context, completion: @escaping (WidgetEntry) -> Void) {
+        completion(loadEntry())
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<WidgetEntry>) -> ()) {
-        let entry = placeholder(in: context)
-        let timeline = Timeline(entries: [entry], policy: .atEnd)
-        completion(timeline)
+    func getTimeline(in context: Context, completion: @escaping (Timeline<WidgetEntry>) -> Void) {
+        let entry = loadEntry()
+        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: Date())!
+        completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
+    }
+
+    // 讀取 App Group UserDefaults 的資料
+    private func loadEntry() -> WidgetEntry {
+        let appGroupID = "group.com.receiptsplit.app"
+        let defaults = UserDefaults(suiteName: appGroupID)
+        if let data = defaults?.data(forKey: "widget_categoryBreakdown"),
+           let decoded = try? JSONDecoder().decode([CategoryBreakdownData].self, from: data) {
+            return WidgetEntry(
+                date: Date(),
+                categoryBreakdown: decoded.map {
+                    CategoryData(
+                        name: $0.name,
+                        amount: $0.amount,
+                        color: Color(hex: $0.colorHex),
+                        percentage: $0.percentage
+                    )
+                }
+            )
+        }
+        // 無資料時顯示範例
+        return WidgetEntry(date: Date(), categoryBreakdown: sampleCategories)
     }
 }
 
-// MARK: - Large Widget Pie Chart View
+// MARK: - Pie Chart View
 struct ReceiptSplitLargeWidgetView: View {
     let entry: WidgetEntry
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 0) {
             Text("Spending by Category")
                 .font(.headline)
-                .padding(.top, 12)
-
-            // Pie Chart
+                .padding(.top, 20)
+                .padding(.leading, 20)
             if !entry.categoryBreakdown.isEmpty {
                 Chart(entry.categoryBreakdown) { category in
                     SectorMark(
@@ -96,19 +89,20 @@ struct ReceiptSplitLargeWidgetView: View {
                         }
                     }
                 }
-                .frame(height: 220)
+                .frame(height: 200)
+                .padding(.horizontal, 20)
             } else {
-                Text("No category data").foregroundColor(.secondary)
-                    .frame(height: 220)
+                Text("No category data")
+                    .foregroundColor(.secondary)
+                    .frame(height: 200)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 20)
             }
-
-            // 顯示各分類金額
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 12)], spacing: 8) {
                 ForEach(entry.categoryBreakdown) { category in
                     HStack(spacing: 6) {
                         Circle().fill(category.color).frame(width: 10, height: 10)
-                        Text(category.name)
-                            .font(.caption)
+                        Text(category.name).font(.caption)
                         Spacer()
                         Text("$\(category.amount, specifier: "%.2f")")
                             .font(.caption2)
@@ -116,12 +110,23 @@ struct ReceiptSplitLargeWidgetView: View {
                     }
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            Spacer(minLength: 12)
+            HStack {
+                Spacer()
+                Text("自動每30分鐘刷新")
+                    .font(.footnote)
+                    .foregroundColor(.gray)
+                    .padding(.bottom, 10)
+                Spacer()
+            }
         }
-        .padding()
+        .background(Color(.systemBackground))
     }
 }
 
-// MARK: - Widget Configuration
+// MARK: - Widget 本體
 struct ReceiptSplittingWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(
@@ -135,3 +140,25 @@ struct ReceiptSplittingWidget: Widget {
         .supportedFamilies([.systemLarge])
     }
 }
+
+// MARK: - 支援函式
+extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        var int = UInt64()
+        Scanner(string: hex.hasPrefix("#") ? String(hex.dropFirst()) : hex).scanHexInt64(&int)
+        let r, g, b: UInt64
+        switch hex.count {
+        case 6: (r, g, b) = (int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        default: (r, g, b) = (0, 0, 0)
+        }
+        self.init(.sRGB, red: Double(r)/255, green: Double(g)/255, blue: Double(b)/255)
+    }
+}
+
+// MARK: - 範例資料
+let sampleCategories: [CategoryData] = [
+    CategoryData(name: "Groceries", amount: 450.0, color: .green, percentage: 36.5),
+    CategoryData(name: "Dining", amount: 380.0, color: .orange, percentage: 30.8),
+    CategoryData(name: "Transportation", amount: 250.0, color: .blue, percentage: 20.2)
+]

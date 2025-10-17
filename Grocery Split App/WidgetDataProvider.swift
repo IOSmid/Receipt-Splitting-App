@@ -175,7 +175,7 @@ extension DashboardViewModel {
         // Calculate today's spending
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: Date())
-        let todayExpenses = recentExpenses.filter { 
+        let todayExpenses = recentExpenses.filter {
             calendar.isDate($0.date, inSameDayAs: Date())
         }
         let todaySpending = todayExpenses.reduce(0) { $0 + $1.totalCost }
@@ -200,4 +200,3 @@ extension DashboardViewModel {
         )
     }
 }
-
