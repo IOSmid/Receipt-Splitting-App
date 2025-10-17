@@ -239,6 +239,15 @@ struct SmallWidgetView: View {
                     .foregroundColor(.secondary)
             }
             .padding()
+
+            // Footer overlay: fixed bottom text
+            VStack {
+                Spacer()
+                Text("15分鐘自動刷新")
+                    .font(.footnote)
+                    .foregroundColor(.gray)
+                    .padding(.bottom, 6)
+            }
         }
     }
     
@@ -332,6 +341,15 @@ struct MediumWidgetView: View {
                 .frame(maxWidth: .infinity)
             }
             .padding()
+
+            // Footer overlay: fixed bottom text
+            VStack {
+                Spacer()
+                Text("15分鐘自動刷新")
+                    .font(.footnote)
+                    .foregroundColor(.gray)
+                    .padding(.bottom, 6)
+            }
         }
     }
     
@@ -523,6 +541,15 @@ struct LargeWidgetView: View {
                 }
             }
             .padding()
+
+            // Footer overlay: fixed bottom text
+            VStack {
+                Spacer()
+                Text("15分鐘自動刷新")
+                    .font(.footnote)
+                    .foregroundColor(.gray)
+                    .padding(.bottom, 6)
+            }
         }
     }
     
@@ -654,4 +681,3 @@ struct ReceiptSplitWidget_Previews: PreviewProvider {
         }
     }
 }
-

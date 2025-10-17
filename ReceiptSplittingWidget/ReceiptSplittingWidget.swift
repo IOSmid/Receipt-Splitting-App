@@ -24,12 +24,16 @@ struct WidgetEntry: TimelineEntry {
     let date: Date
     let categoryBreakdown: [CategoryData]
     let totalSpending: Double
+    let budgetAmount: Double
+    let totalOwed: Double
+    let pendingRequestsCount: Int
+    let timeframe: String?
 }
 
 // MARK: - Provider
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> WidgetEntry {
-        WidgetEntry(date: Date(), categoryBreakdown: sampleCategories, totalSpending: 1234.56)
+        WidgetEntry(date: Date(), categoryBreakdown: sampleCategories, totalSpending: 1234.56, budgetAmount: 2000.0, totalOwed: 456.78, pendingRequestsCount: 2, timeframe: "This Week")
     }
 
     func getSnapshot(in context: Context, completion: @escaping (WidgetEntry) -> Void) {
@@ -49,6 +53,10 @@ struct Provider: TimelineProvider {
 
         // Read total spending (fallback 0.0)
         let totalSpending = defaults?.double(forKey: "widget_totalSpending") ?? 0.0
+        let budgetAmount = defaults?.double(forKey: "widget_budgetAmount") ?? 0.0
+        let totalOwed = defaults?.double(forKey: "widget_totalOwed") ?? 0.0
+        let pendingRequestsCount = defaults?.integer(forKey: "widget_pendingCount") ?? 0
+        let timeframe = defaults?.string(forKey: "widget_timeframe")
 
         if let data = defaults?.data(forKey: "widget_categoryBreakdown"),
            let decoded = try? JSONDecoder().decode([CategoryBreakdownData].self, from: data) {
@@ -62,11 +70,15 @@ struct Provider: TimelineProvider {
                         percentage: $0.percentage
                     )
                 },
-                totalSpending: totalSpending
+                totalSpending: totalSpending,
+                budgetAmount: budgetAmount,
+                totalOwed: totalOwed,
+                pendingRequestsCount: pendingRequestsCount,
+                timeframe: timeframe
             )
         }
         // 無資料時顯示範例
-        return WidgetEntry(date: Date(), categoryBreakdown: sampleCategories, totalSpending: totalSpending > 0 ? totalSpending : 1234.56)
+        return WidgetEntry(date: Date(), categoryBreakdown: sampleCategories, totalSpending: totalSpending > 0 ? totalSpending : 1234.56, budgetAmount: budgetAmount, totalOwed: totalOwed, pendingRequestsCount: pendingRequestsCount, timeframe: timeframe ?? "This Week")
     }
 }
 
@@ -178,6 +190,123 @@ struct ReceiptSplittingSmallView: View {
     }
 }
 
+// MARK: - Medium Widget View
+struct ReceiptSplittingMediumView: View {
+    let entry: WidgetEntry
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color.blue.opacity(0.06), Color.purple.opacity(0.02)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            HStack(spacing: 12) {
+                // Left: total spending and budget progress
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Total")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(entry.timeframe ?? "") // placeholder: timeframe not available here
+                    }
+
+                    Text("$\(entry.totalSpending, specifier: "%.2f")")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+
+                    // Budget progress
+                    VStack(alignment: .leading, spacing: 4) {
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(Color.gray.opacity(0.2))
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(progressColor)
+                                    .frame(width: geo.size.width * CGFloat(spendingProgress))
+                            }
+                        }
+                        .frame(height: 8)
+
+                        HStack {
+                            Text("Budget: $\(entry.budgetAmount, specifier: "%.0f")")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("\(Int(spendingProgress * 100))%")
+                                .font(.caption2)
+                                .foregroundColor(progressColor)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+
+                Divider()
+
+                // Right: top categories or owed
+                VStack(alignment: .leading, spacing: 8) {
+                    if entry.totalOwed > 0 {
+                        HStack {
+                            Image(systemName: "dollarsign.circle.fill")
+                                .foregroundColor(.green)
+                            VStack(alignment: .leading) {
+                                Text("Owed")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("$\(entry.totalOwed, specifier: "%.2f")")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                            }
+                        }
+
+                        if entry.pendingRequestsCount > 0 {
+                            Text("\(entry.pendingRequestsCount) pending")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    } else {
+                        Text("Top Categories")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        ForEach(entry.categoryBreakdown.prefix(3)) { cat in
+                            HStack(spacing: 8) {
+                                Circle().fill(cat.color).frame(width: 8, height: 8)
+                                Text(cat.name).font(.caption)
+                                Spacer()
+                                Text("$\(cat.amount, specifier: "%.0f")")
+                                    .font(.caption2)
+                                    .fontWeight(.semibold)
+                            }
+                        }
+                    }
+
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding()
+        }
+    }
+
+    private var spendingProgress: Double {
+        if entry.budgetAmount > 0 {
+            return min(entry.totalSpending / entry.budgetAmount, 1.0)
+        }
+        return 0.0
+    }
+
+    private var progressColor: Color {
+        if spendingProgress >= 1.0 { return .red }
+        if spendingProgress >= 0.8 { return .orange }
+        return .green
+    }
+}
+
 // MARK: - Entry view to select by family
 struct ReceiptSplittingWidgetEntryView: View {
     @Environment(\.widgetFamily) var family
@@ -187,13 +316,15 @@ struct ReceiptSplittingWidgetEntryView: View {
         switch family {
         case .systemSmall:
             ReceiptSplittingSmallView(entry: entry as! WidgetEntry)
+        case .systemMedium:
+            ReceiptSplittingMediumView(entry: entry as! WidgetEntry)
         default:
             ReceiptSplitLargeWidgetView(entry: entry as! WidgetEntry)
         }
     }
 }
 
-// MARK: - Widget 本體 (支援 small + large)
+// MARK: - Widget 本體 (支援 small + medium + large)
 struct ReceiptSplittingWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(
@@ -204,7 +335,7 @@ struct ReceiptSplittingWidget: Widget {
         }
         .configurationDisplayName("Spending by Category")
         .description("See your spending breakdown in a pie chart.")
-        .supportedFamilies([.systemSmall, .systemLarge])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
 
