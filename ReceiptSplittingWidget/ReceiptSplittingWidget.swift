@@ -23,12 +23,13 @@ struct CategoryData: Identifiable {
 struct WidgetEntry: TimelineEntry {
     let date: Date
     let categoryBreakdown: [CategoryData]
+    let totalSpending: Double
 }
 
 // MARK: - Provider
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> WidgetEntry {
-        WidgetEntry(date: Date(), categoryBreakdown: sampleCategories)
+        WidgetEntry(date: Date(), categoryBreakdown: sampleCategories, totalSpending: 1234.56)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (WidgetEntry) -> Void) {
@@ -45,6 +46,10 @@ struct Provider: TimelineProvider {
     private func loadEntry() -> WidgetEntry {
         let appGroupID = "group.com.receiptsplit.app"
         let defaults = UserDefaults(suiteName: appGroupID)
+
+        // Read total spending (fallback 0.0)
+        let totalSpending = defaults?.double(forKey: "widget_totalSpending") ?? 0.0
+
         if let data = defaults?.data(forKey: "widget_categoryBreakdown"),
            let decoded = try? JSONDecoder().decode([CategoryBreakdownData].self, from: data) {
             return WidgetEntry(
@@ -56,11 +61,12 @@ struct Provider: TimelineProvider {
                         color: Color(hex: $0.colorHex),
                         percentage: $0.percentage
                     )
-                }
+                },
+                totalSpending: totalSpending
             )
         }
         // 無資料時顯示範例
-        return WidgetEntry(date: Date(), categoryBreakdown: sampleCategories)
+        return WidgetEntry(date: Date(), categoryBreakdown: sampleCategories, totalSpending: totalSpending > 0 ? totalSpending : 1234.56)
     }
 }
 
@@ -126,18 +132,79 @@ struct ReceiptSplitLargeWidgetView: View {
     }
 }
 
-// MARK: - Widget 本體
+// MARK: - Small Widget View (顯示 total spending)
+struct ReceiptSplittingSmallView: View {
+    let entry: WidgetEntry
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color.blue.opacity(0.06), Color.purple.opacity(0.02)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Total Spending")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+
+                Text("$\(entry.totalSpending, specifier: "%.2f")")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+
+                Spacer()
+
+                if let top = entry.categoryBreakdown.first {
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(top.color)
+                            .frame(width: 10, height: 10)
+                        Text(top.name)
+                            .font(.caption)
+                            .lineLimit(1)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text("$\(top.amount, specifier: "%.0f")")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding(10)
+        }
+    }
+}
+
+// MARK: - Entry view to select by family
+struct ReceiptSplittingWidgetEntryView: View {
+    @Environment(\.widgetFamily) var family
+    let entry: Provider.Entry
+
+    var body: some View {
+        switch family {
+        case .systemSmall:
+            ReceiptSplittingSmallView(entry: entry as! WidgetEntry)
+        default:
+            ReceiptSplitLargeWidgetView(entry: entry as! WidgetEntry)
+        }
+    }
+}
+
+// MARK: - Widget 本體 (支援 small + large)
 struct ReceiptSplittingWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(
             kind: "ReceiptSplitWidget",
             provider: Provider()
         ) { entry in
-            ReceiptSplitLargeWidgetView(entry: entry)
+            ReceiptSplittingWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("Spending by Category")
         .description("See your spending breakdown in a pie chart.")
-        .supportedFamilies([.systemLarge])
+        .supportedFamilies([.systemSmall, .systemLarge])
     }
 }
 
