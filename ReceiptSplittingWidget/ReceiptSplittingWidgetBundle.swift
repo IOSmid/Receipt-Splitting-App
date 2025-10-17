@@ -1,10 +1,3 @@
-//
-//  ReceiptSplittingWidgetBundle.swift
-//  ReceiptSplittingWidget
-//
-//  Created by fcuiecs on 2025/10/16.
-//
-
 import WidgetKit
 import SwiftUI
 
