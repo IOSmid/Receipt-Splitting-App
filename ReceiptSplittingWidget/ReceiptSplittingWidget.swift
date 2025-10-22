@@ -140,7 +140,9 @@ struct ReceiptSplitLargeWidgetView: View {
                 Spacer()
             }
         }
-        .background(Color(.systemBackground))
+        .containerBackground(for: .widget) {
+            Color(.systemBackground)
+        }
     }
 }
 
@@ -148,44 +150,43 @@ struct ReceiptSplitLargeWidgetView: View {
 struct ReceiptSplittingSmallView: View {
     let entry: WidgetEntry
     var body: some View {
-        ZStack {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Total Spending")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+
+            Text("$\(entry.totalSpending, specifier: "%.2f")")
+                .font(.title2)
+                .fontWeight(.bold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+
+            Spacer()
+
+            if let top = entry.categoryBreakdown.first {
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(top.color)
+                        .frame(width: 10, height: 10)
+                    Text(top.name)
+                        .font(.caption)
+                        .lineLimit(1)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("$\(top.amount, specifier: "%.0f")")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding(10)
+        .containerBackground(for: .widget) {
             LinearGradient(
                 colors: [Color.blue.opacity(0.06), Color.purple.opacity(0.02)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Total Spending")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-
-                Text("$\(entry.totalSpending, specifier: "%.2f")")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-
-                Spacer()
-
-                if let top = entry.categoryBreakdown.first {
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(top.color)
-                            .frame(width: 10, height: 10)
-                        Text(top.name)
-                            .font(.caption)
-                            .lineLimit(1)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("$\(top.amount, specifier: "%.0f")")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-            .padding(10)
         }
     }
 }
@@ -195,101 +196,100 @@ struct ReceiptSplittingMediumView: View {
     let entry: WidgetEntry
 
     var body: some View {
-        ZStack {
+        HStack(spacing: 12) {
+            // Left: total spending and budget progress
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Total")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(entry.timeframe ?? "") // placeholder: timeframe not available here
+                }
+
+                Text("$\(entry.totalSpending, specifier: "%.2f")")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+
+                // Budget progress
+                VStack(alignment: .leading, spacing: 4) {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.gray.opacity(0.2))
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(progressColor)
+                                .frame(width: geo.size.width * CGFloat(spendingProgress))
+                        }
+                    }
+                    .frame(height: 8)
+
+                    HStack {
+                        Text("Budget: $\(entry.budgetAmount, specifier: "%.0f")")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text("\(Int(spendingProgress * 100))%")
+                            .font(.caption2)
+                            .foregroundColor(progressColor)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+
+            Divider()
+
+            // Right: top categories or owed
+            VStack(alignment: .leading, spacing: 8) {
+                if entry.totalOwed > 0 {
+                    HStack {
+                        Image(systemName: "dollarsign.circle.fill")
+                            .foregroundColor(.green)
+                        VStack(alignment: .leading) {
+                            Text("Owed")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text("$\(entry.totalOwed, specifier: "%.2f")")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                        }
+                    }
+
+                    if entry.pendingRequestsCount > 0 {
+                        Text("\(entry.pendingRequestsCount) pending")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    Text("Top Categories")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    ForEach(entry.categoryBreakdown.prefix(3)) { cat in
+                        HStack(spacing: 8) {
+                            Circle().fill(cat.color).frame(width: 8, height: 8)
+                            Text(cat.name).font(.caption)
+                            Spacer()
+                            Text("$\(cat.amount, specifier: "%.0f")")
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                        }
+                    }
+                }
+
+                Spacer()
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding()
+        .containerBackground(for: .widget) {
             LinearGradient(
                 colors: [Color.blue.opacity(0.06), Color.purple.opacity(0.02)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-
-            HStack(spacing: 12) {
-                // Left: total spending and budget progress
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Total")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(entry.timeframe ?? "") // placeholder: timeframe not available here
-                    }
-
-                    Text("$\(entry.totalSpending, specifier: "%.2f")")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-
-                    // Budget progress
-                    VStack(alignment: .leading, spacing: 4) {
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color.gray.opacity(0.2))
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(progressColor)
-                                    .frame(width: geo.size.width * CGFloat(spendingProgress))
-                            }
-                        }
-                        .frame(height: 8)
-
-                        HStack {
-                            Text("Budget: $\(entry.budgetAmount, specifier: "%.0f")")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Text("\(Int(spendingProgress * 100))%")
-                                .font(.caption2)
-                                .foregroundColor(progressColor)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity)
-
-                Divider()
-
-                // Right: top categories or owed
-                VStack(alignment: .leading, spacing: 8) {
-                    if entry.totalOwed > 0 {
-                        HStack {
-                            Image(systemName: "dollarsign.circle.fill")
-                                .foregroundColor(.green)
-                            VStack(alignment: .leading) {
-                                Text("Owed")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text("$\(entry.totalOwed, specifier: "%.2f")")
-                                    .font(.headline)
-                                    .fontWeight(.bold)
-                            }
-                        }
-
-                        if entry.pendingRequestsCount > 0 {
-                            Text("\(entry.pendingRequestsCount) pending")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                    } else {
-                        Text("Top Categories")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-
-                        ForEach(entry.categoryBreakdown.prefix(3)) { cat in
-                            HStack(spacing: 8) {
-                                Circle().fill(cat.color).frame(width: 8, height: 8)
-                                Text(cat.name).font(.caption)
-                                Spacer()
-                                Text("$\(cat.amount, specifier: "%.0f")")
-                                    .font(.caption2)
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                    }
-
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .padding()
         }
     }
 

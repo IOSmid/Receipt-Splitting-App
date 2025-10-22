@@ -189,65 +189,60 @@ struct SmallWidgetView: View {
     let entry: WidgetEntry
     
     var body: some View {
-        ZStack {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.title3)
+                    .foregroundColor(.blue)
+                Spacer()
+                Text(entry.timeframe)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Spending")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Text("$\(entry.totalSpending, specifier: "%.2f")")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+            }
+            
+            // Budget Progress Bar
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.gray.opacity(0.2))
+                    
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(progressColor)
+                        .frame(width: geometry.size.width * entry.spendingProgress)
+                }
+            }
+            .frame(height: 6)
+            
+            Text("$\(entry.budgetAmount, specifier: "%.0f") budget")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            
+            // Footer text
+            Text("15分鐘自動刷新")
+                .font(.footnote)
+                .foregroundColor(.gray)
+        }
+        .padding()
+        .containerBackground(for: .widget) {
             LinearGradient(
                 colors: [Color.blue.opacity(0.1), Color.purple.opacity(0.05)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: "chart.line.uptrend.xyaxis")
-                        .font(.title3)
-                        .foregroundColor(.blue)
-                    Spacer()
-                    Text(entry.timeframe)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Spending")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Text("$\(entry.totalSpending, specifier: "%.2f")")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .minimumScaleFactor(0.7)
-                        .lineLimit(1)
-                }
-                
-                // Budget Progress Bar
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.gray.opacity(0.2))
-                        
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(progressColor)
-                            .frame(width: geometry.size.width * entry.spendingProgress)
-                    }
-                }
-                .frame(height: 6)
-                
-                Text("$\(entry.budgetAmount, specifier: "%.0f") budget")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-            .padding()
-
-            // Footer overlay: fixed bottom text
-            VStack {
-                Spacer()
-                Text("15分鐘自動刷新")
-                    .font(.footnote)
-                    .foregroundColor(.gray)
-                    .padding(.bottom, 6)
-            }
         }
     }
     
@@ -267,13 +262,7 @@ struct MediumWidgetView: View {
     let entry: WidgetEntry
     
     var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [Color.blue.opacity(0.08), Color.purple.opacity(0.03)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            
+        VStack(spacing: 0) {
             HStack(spacing: 16) {
                 // Left Side - Spending Overview
                 VStack(alignment: .leading, spacing: 12) {
@@ -341,15 +330,19 @@ struct MediumWidgetView: View {
                 .frame(maxWidth: .infinity)
             }
             .padding()
-
-            // Footer overlay: fixed bottom text
-            VStack {
-                Spacer()
-                Text("15分鐘自動刷新")
-                    .font(.footnote)
-                    .foregroundColor(.gray)
-                    .padding(.bottom, 6)
-            }
+            
+            // Footer text
+            Text("15分鐘自動刷新")
+                .font(.footnote)
+                .foregroundColor(.gray)
+                .padding(.bottom, 6)
+        }
+        .containerBackground(for: .widget) {
+            LinearGradient(
+                colors: [Color.blue.opacity(0.08), Color.purple.opacity(0.03)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         }
     }
     
@@ -429,127 +422,122 @@ struct LargeWidgetView: View {
     let entry: WidgetEntry
     
     var body: some View {
-        ZStack {
+        VStack(spacing: 16) {
+            // Header Row
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Receipt Split")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                    Text(entry.timeframe)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.title2)
+                    .foregroundColor(.blue)
+            }
+            
+            // Stats Row
+            HStack(spacing: 12) {
+                // Spending Card
+                StatCard(
+                    icon: "dollarsign.circle.fill",
+                    iconColor: .blue,
+                    label: "Spending",
+                    value: "$\(entry.totalSpending, specifier: "%.2f")",
+                    subtitle: "of $\(entry.budgetAmount, specifier: "%.0f")"
+                )
+                
+                // Owed Card
+                StatCard(
+                    icon: "arrow.down.circle.fill",
+                    iconColor: .green,
+                    label: "Owed",
+                    value: "$\(entry.totalOwed, specifier: "%.2f")",
+                    subtitle: "\(entry.pendingRequestsCount) pending"
+                )
+            }
+            
+            // Budget Progress
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Budget Progress")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("\(Int(entry.spendingProgress * 100))%")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(progressColor)
+                }
+                
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.gray.opacity(0.2))
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(progressColor)
+                            .frame(width: geometry.size.width * entry.spendingProgress)
+                    }
+                }
+                .frame(height: 10)
+            }
+            
+            Divider()
+            
+            // Recent Expenses
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Recent Expenses")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.secondary)
+                
+                if entry.recentExpenses.isEmpty {
+                    Text("No expenses yet")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 8)
+                } else {
+                    ForEach(entry.recentExpenses.prefix(4)) { expense in
+                        HStack(spacing: 8) {
+                            Image(systemName: expense.categoryIcon)
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                                .frame(width: 20)
+                            
+                            Text(expense.name)
+                                .font(.caption)
+                                .lineLimit(1)
+                            
+                            Spacer()
+                            
+                            Text("$\(expense.amount, specifier: "%.2f")")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                        }
+                    }
+                }
+            }
+            
+            // Footer text
+            Text("15分鐘自動刷新")
+                .font(.footnote)
+                .foregroundColor(.gray)
+        }
+        .padding()
+        .containerBackground(for: .widget) {
             LinearGradient(
                 colors: [Color.blue.opacity(0.06), Color.purple.opacity(0.02)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            
-            VStack(spacing: 16) {
-                // Header Row
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Receipt Split")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                        Text(entry.timeframe)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chart.line.uptrend.xyaxis")
-                        .font(.title2)
-                        .foregroundColor(.blue)
-                }
-                
-                // Stats Row
-                HStack(spacing: 12) {
-                    // Spending Card
-                    StatCard(
-                        icon: "dollarsign.circle.fill",
-                        iconColor: .blue,
-                        label: "Spending",
-                        value: "$\(entry.totalSpending, specifier: "%.2f")",
-                        subtitle: "of $\(entry.budgetAmount, specifier: "%.0f")"
-                    )
-                    
-                    // Owed Card
-                    StatCard(
-                        icon: "arrow.down.circle.fill",
-                        iconColor: .green,
-                        label: "Owed",
-                        value: "$\(entry.totalOwed, specifier: "%.2f")",
-                        subtitle: "\(entry.pendingRequestsCount) pending"
-                    )
-                }
-                
-                // Budget Progress
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Budget Progress")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("\(Int(entry.spendingProgress * 100))%")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(progressColor)
-                    }
-                    
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.gray.opacity(0.2))
-                            
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(progressColor)
-                                .frame(width: geometry.size.width * entry.spendingProgress)
-                        }
-                    }
-                    .frame(height: 10)
-                }
-                
-                Divider()
-                
-                // Recent Expenses
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Recent Expenses")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
-                    
-                    if entry.recentExpenses.isEmpty {
-                        Text("No expenses yet")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.vertical, 8)
-                    } else {
-                        ForEach(entry.recentExpenses.prefix(4)) { expense in
-                            HStack(spacing: 8) {
-                                Image(systemName: expense.categoryIcon)
-                                    .font(.caption)
-                                    .foregroundColor(.blue)
-                                    .frame(width: 20)
-                                
-                                Text(expense.name)
-                                    .font(.caption)
-                                    .lineLimit(1)
-                                
-                                Spacer()
-                                
-                                Text("$\(expense.amount, specifier: "%.2f")")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                    }
-                }
-            }
-            .padding()
-
-            // Footer overlay: fixed bottom text
-            VStack {
-                Spacer()
-                Text("15分鐘自動刷新")
-                    .font(.footnote)
-                    .foregroundColor(.gray)
-                    .padding(.bottom, 6)
-            }
         }
     }
     
