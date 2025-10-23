@@ -29,7 +29,10 @@ class WidgetDataProvider {
         categoryBreakdown: [CategorySpending],
         timeframe: String
     ) {
-        guard let defaults = sharedDefaults else { return }
+        guard let defaults = sharedDefaults else { 
+            print("⚠️ WidgetDataProvider: Failed to access shared UserDefaults for app group")
+            return 
+        }
         
         // Save basic stats
         defaults.set(totalSpending, forKey: "widget_totalSpending")

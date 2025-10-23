@@ -180,10 +180,10 @@ struct ReceiptSplittingSmallView: View {
                 }
             }
         }
-        .padding(10)
+        .padding(14)
         .containerBackground(for: .widget) {
             LinearGradient(
-                colors: [Color.blue.opacity(0.06), Color.purple.opacity(0.02)],
+                colors: [Color.blue.opacity(0.08), Color.purple.opacity(0.04)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -204,7 +204,9 @@ struct ReceiptSplittingMediumView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text(entry.timeframe ?? "") // placeholder: timeframe not available here
+                    Text(entry.timeframe ?? "")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
 
                 Text("$\(entry.totalSpending, specifier: "%.2f")")
@@ -283,10 +285,10 @@ struct ReceiptSplittingMediumView: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .padding()
+        .padding(16)
         .containerBackground(for: .widget) {
             LinearGradient(
-                colors: [Color.blue.opacity(0.06), Color.purple.opacity(0.02)],
+                colors: [Color.blue.opacity(0.08), Color.purple.opacity(0.04)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
