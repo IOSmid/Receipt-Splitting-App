@@ -623,6 +623,10 @@ struct AddExpenseView: View {
         }
         
         try? modelContext.save()
+        
+        // Notify dashboard and widgets to update
+        NotificationCenter.default.post(name: .expenseDataChanged, object: nil)
+        
         dismiss()
         }
     }
@@ -640,6 +644,10 @@ struct AddExpenseView: View {
         
         modelContext.insert(expense)
         try? modelContext.save()
+        
+        // Notify dashboard and widgets to update
+        NotificationCenter.default.post(name: .expenseDataChanged, object: nil)
+        
         dismiss()
         }
     }
