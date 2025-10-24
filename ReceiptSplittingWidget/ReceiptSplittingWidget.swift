@@ -91,6 +91,7 @@ struct ReceiptSplitLargeWidgetView: View {
                 .font(.headline)
                 .padding(.top, 20)
                 .padding(.leading, 20)
+
             if !entry.categoryBreakdown.isEmpty {
                 Chart(entry.categoryBreakdown) { category in
                     SectorMark(
@@ -109,43 +110,49 @@ struct ReceiptSplitLargeWidgetView: View {
                 }
                 .frame(height: 200)
                 .padding(.horizontal, 20)
+                .padding(.top, 12)
             } else {
                 Text("No category data")
                     .foregroundColor(.secondary)
                     .frame(height: 200)
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 20)
+                    .padding(.top, 12)
             }
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 12)], spacing: 8) {
+
+            HStack(spacing: 24) {
                 ForEach(entry.categoryBreakdown) { category in
-                    HStack(spacing: 6) {
-                        Circle().fill(category.color).frame(width: 10, height: 10)
-                        Text(category.name).font(.caption)
-                        Spacer()
-                        Text("$\(category.amount, specifier: "%.2f")")
+                    VStack(spacing: 6) {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(category.color)
+                                .frame(width: 10, height: 10)
+                            Text(category.name)
+                                .font(.caption)
+                                .lineLimit(1)               // 不換行
+                                .truncationMode(.tail)      // 超長時尾端省略
+                        }
+                        .fixedSize(horizontal: true, vertical: false)
+
+                        // 修正：不要在 Text 裡直接使用帶引號的 specifier，改用 String(format:)
+                        Text(String(format: "$%.2f", category.amount))
                             .font(.caption2)
                             .fontWeight(.semibold)
                     }
+                    .frame(minWidth: 80, maxWidth: .infinity) // 平分寬度
+                    .multilineTextAlignment(.center)
                 }
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
+
             Spacer(minLength: 12)
-            HStack {
-                Spacer()
-                Text("自動每30分鐘刷新")
-                    .font(.footnote)
-                    .foregroundColor(.gray)
-                    .padding(.bottom, 10)
-                Spacer()
-            }
         }
         .containerBackground(for: .widget) {
             Color(.systemBackground)
         }
     }
 }
-
 // MARK: - Small Widget View (顯示 total spending)
 struct ReceiptSplittingSmallView: View {
     let entry: WidgetEntry
