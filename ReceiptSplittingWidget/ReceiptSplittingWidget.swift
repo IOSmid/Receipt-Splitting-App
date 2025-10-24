@@ -91,6 +91,7 @@ struct ReceiptSplitLargeWidgetView: View {
                 .font(.headline)
                 .padding(.top, 20)
                 .padding(.leading, 20)
+                .padding(.bottom, 12) // 加大標題與 Chart 間距
 
             if !entry.categoryBreakdown.isEmpty {
                 Chart(entry.categoryBreakdown) { category in
@@ -100,52 +101,48 @@ struct ReceiptSplitLargeWidgetView: View {
                     )
                     .foregroundStyle(category.color)
                     .annotation(position: .overlay) {
-                        if category.percentage > 8 {
+                        if category.percentage > 5 {
                             Text("\(Int(category.percentage))%")
                                 .font(.caption2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.white)
+                                .lineLimit(1)
                         }
                     }
                 }
                 .frame(height: 200)
                 .padding(.horizontal, 20)
-                .padding(.top, 12)
             } else {
                 Text("No category data")
                     .foregroundColor(.secondary)
                     .frame(height: 200)
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 20)
-                    .padding(.top, 12)
             }
 
-            HStack(spacing: 24) {
-                ForEach(entry.categoryBreakdown) { category in
-                    VStack(spacing: 6) {
-                        HStack(spacing: 8) {
-                            Circle()
-                                .fill(category.color)
-                                .frame(width: 10, height: 10)
-                            Text(category.name)
-                                .font(.caption)
-                                .lineLimit(1)               // 不換行
-                                .truncationMode(.tail)      // 超長時尾端省略
-                        }
-                        .fixedSize(horizontal: true, vertical: false)
+            // 只顯示前三個佔比最多的
+            let top3 = entry.categoryBreakdown
+                .sorted { $0.percentage > $1.percentage }
+                .prefix(3)
 
-                        // 修正：不要在 Text 裡直接使用帶引號的 specifier，改用 String(format:)
-                        Text(String(format: "$%.2f", category.amount))
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(top3) { category in
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(category.color)
+                            .frame(width: 10, height: 10)
+                        Text(category.name)
+                            .font(.caption)
+                            .lineLimit(1)
+                        Spacer()
+                        Text("$\(category.amount, specifier: "%.2f")")
                             .font(.caption2)
                             .fontWeight(.semibold)
                     }
-                    .frame(minWidth: 80, maxWidth: .infinity) // 平分寬度
-                    .multilineTextAlignment(.center)
                 }
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
-
             Spacer(minLength: 12)
         }
         .containerBackground(for: .widget) {
