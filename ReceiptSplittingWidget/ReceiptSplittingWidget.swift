@@ -153,44 +153,136 @@ struct ReceiptSplitLargeWidgetView: View {
         }
     }
 }
-// MARK: - Small Widget View (顯示 total spending)
+// MARK: - Small Widget View (重新設計的小工具)
 struct ReceiptSplittingSmallView: View {
     let entry: WidgetEntry
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Total Spending")
-                .font(.caption2)
-                .foregroundColor(.secondary)
 
-            Text("$\(entry.totalSpending, specifier: "%.2f")")
-                .font(.title2)
-                .fontWeight(.bold)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
+    var body: some View {
+        VStack(spacing: 0) {
+            // 頂部區域 - 主要金額
+            VStack(spacing: 4) {
+                HStack {
+                    Image(systemName: "chart.pie.fill")
+                        .foregroundColor(.white)
+                        .font(.caption)
+                    Text("本週支出")
+                        .font(.caption2)
+                        .foregroundColor(.white.opacity(0.9))
+                    Spacer()
+                }
+
+                HStack {
+                    Text("$\(entry.totalSpending, specifier: "%.0f")")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Spacer()
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
 
             Spacer()
 
-            if let top = entry.categoryBreakdown.first {
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(top.color)
-                        .frame(width: 10, height: 10)
-                    Text(top.name)
-                        .font(.caption)
-                        .lineLimit(1)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text("$\(top.amount, specifier: "%.0f")")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
+            // 底部區域 - 預算進度或最大類別
+            if entry.budgetAmount > 0 {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("預算進度")
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.8))
+                        Spacer()
+                        Text("\(Int(budgetProgress * 100))%")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(budgetProgressColor)
+                    }
+
+                    // 進度條
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color.white.opacity(0.3))
+                                .frame(height: 6)
+
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(budgetProgressColor)
+                                .frame(width: geo.size.width * CGFloat(min(budgetProgress, 1.0)), height: 6)
+                        }
+                    }
+                    .frame(height: 6)
                 }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 14)
+            } else if let topCategory = entry.categoryBreakdown.first {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Circle()
+                            .fill(topCategory.color)
+                            .frame(width: 8, height: 8)
+                        Text("最大支出")
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.8))
+                        Spacer()
+                    }
+
+                    HStack {
+                        Text(topCategory.name)
+                            .font(.caption)
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        Spacer()
+                        Text("$\(topCategory.amount, specifier: "%.0f")")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 14)
             }
         }
-        .padding(14)
         .containerBackground(for: .widget) {
-            LinearGradient(
-                colors: [Color.blue.opacity(0.08), Color.purple.opacity(0.04)],
+            dynamicGradient
+        }
+    }
+
+    private var budgetProgress: Double {
+        if entry.budgetAmount > 0 {
+            return entry.totalSpending / entry.budgetAmount
+        }
+        return 0.0
+    }
+
+    private var budgetProgressColor: Color {
+        if budgetProgress >= 1.0 { return Color.red.opacity(0.9) }
+        if budgetProgress >= 0.8 { return Color.orange.opacity(0.9) }
+        return Color.green.opacity(0.9)
+    }
+
+    private var dynamicGradient: LinearGradient {
+        if let topCategory = entry.categoryBreakdown.first {
+            // 使用最大類別顏色生成漸變
+            let baseColor = topCategory.color
+            return LinearGradient(
+                colors: [
+                    baseColor.opacity(0.9),
+                    baseColor.opacity(0.7),
+                    baseColor.opacity(0.5)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        } else {
+            // 預設漸變（當沒有資料時）
+            return LinearGradient(
+                colors: [
+                    Color(red: 0.2, green: 0.4, blue: 0.8),
+                    Color(red: 0.4, green: 0.2, blue: 0.6),
+                    Color(red: 0.6, green: 0.3, blue: 0.4)
+                ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
