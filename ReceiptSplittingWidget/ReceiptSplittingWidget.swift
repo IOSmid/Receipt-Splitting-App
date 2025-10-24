@@ -386,11 +386,8 @@ struct ReceiptSplittingMediumView: View {
         }
         .padding(16)
         .containerBackground(for: .widget) {
-            LinearGradient(
-                colors: [Color.blue.opacity(0.08), Color.purple.opacity(0.04)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            // 改為與小尺寸小工具相同的動態漸變背景
+            dynamicGradient
         }
     }
 
@@ -405,6 +402,51 @@ struct ReceiptSplittingMediumView: View {
         if spendingProgress >= 1.0 { return .red }
         if spendingProgress >= 0.8 { return .orange }
         return .green
+    }
+
+    // 與小尺寸小工具相同的背景邏輯
+    private var dynamicGradient: LinearGradient {
+        // 依據圓餅圖的前 2-3 大分類顏色建立漸層
+        let topColors = entry.categoryBreakdown
+            .sorted { $0.percentage > $1.percentage }
+            .prefix(3)
+            .map { $0.color }
+
+        if topColors.count >= 2 {
+            // 以多色混合製作更有層次的漸層，略帶透明讓過渡更柔和
+            let blended: [Color] = [
+                topColors[0].opacity(0.95),
+                topColors[1].opacity(0.85),
+                (topColors.count >= 3 ? topColors[2] : topColors[0]).opacity(0.75)
+            ]
+            return LinearGradient(
+                colors: blended,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        } else if let only = topColors.first {
+            // 僅有一個分類時，使用同色系深淺過渡
+            return LinearGradient(
+                colors: [
+                    only.opacity(0.95),
+                    only.opacity(0.8),
+                    only.opacity(0.65)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        } else {
+            // 沒有資料時的預設漸層
+            return LinearGradient(
+                colors: [
+                    Color(red: 0.2, green: 0.4, blue: 0.8),
+                    Color(red: 0.4, green: 0.2, blue: 0.6),
+                    Color(red: 0.6, green: 0.3, blue: 0.4)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
     }
 }
 
